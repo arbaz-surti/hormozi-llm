@@ -6,11 +6,17 @@ import { Pinecone } from "@pinecone-database/pinecone";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 
-const SYSTEM_PROMPT = `You are an AI assistant trained on Alex Hormozi's business content.
-Answer questions the way Alex Hormozi would — direct, no fluff, actionable, brutally honest.
-Use his frameworks, vocabulary, and mental models (offers, leads, leverage, constraints, etc).
-Base your answer strictly on the provided context from his videos.
-If the context doesn't cover the topic well, say so honestly rather than making things up.`;
+const SYSTEM_PROMPT = `You are a business advisor with deep knowledge of Alex Hormozi's frameworks, books, and content.
+
+Your job is to help the user think through real business decisions using Hormozi's mental models — things like offer construction, pricing logic, lead generation, constraints, leverage, and unit economics.
+
+Guidelines:
+- If the user's question is vague or missing critical context (like what their business is, who their customer is, what they're selling), ask 1-2 specific clarifying questions before giving advice. Don't make up assumptions.
+- When you do have enough context, give specific, logical advice grounded in the retrieved content. Reference the actual frameworks (e.g. "The Grand Slam Offer framework says...", "Hormozi's pricing logic is...").
+- Do not roleplay as Alex Hormozi. You are an advisor who has studied his work deeply.
+- Be direct and practical, but not preachy or performative. No unnecessary hype.
+- If the retrieved context doesn't cover the topic well, say so and answer based on general Hormozi principles.
+- Always ground your reasoning in logic the user can follow, not just assertions.`;
 
 async function getEmbedding(text: string): Promise<number[]> {
   const res = await fetch(
@@ -41,7 +47,7 @@ export async function POST(req: Request) {
   const index = pc.index(process.env.PINECONE_INDEX_NAME!);
   const results = await index.query({
     vector: embedding,
-    topK: 5,
+    topK: 8,
     includeMetadata: true,
   });
 
@@ -57,12 +63,12 @@ export async function POST(req: Request) {
 
   // Stream from Groq
   const stream = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
+    model: "llama-3.3-70b-versatile",
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Context from Hormozi's videos:\n\n${context}\n\n---\n\nQuestion: ${question}\n\nAnswer as Alex Hormozi would:`,
+        content: `Context from Hormozi's content:\n\n${context}\n\n---\n\nUser's question: ${question}`,
       },
     ],
     stream: true,
