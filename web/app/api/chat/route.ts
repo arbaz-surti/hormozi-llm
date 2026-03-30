@@ -43,7 +43,10 @@ async function getEmbedding(text: string): Promise<number[]> {
 }
 
 export async function POST(req: Request) {
-  const { question } = (await req.json()) as { question: string };
+  const { question, history } = (await req.json()) as {
+    question: string;
+    history?: { role: "user" | "assistant"; content: string }[];
+  };
 
   if (!question?.trim()) {
     return new Response("Missing question", { status: 400 });
@@ -73,6 +76,7 @@ export async function POST(req: Request) {
     model: "llama-3.3-70b-versatile",
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
+      ...(history ?? []),
       {
         role: "user",
         content: `Context from Hormozi's content:\n\n${context}\n\n---\n\nUser's question: ${question}`,

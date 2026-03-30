@@ -47,7 +47,12 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({
+          question,
+          history: messages
+            .filter((m) => !m.streaming && m.content)
+            .map((m) => ({ role: m.role, content: m.content })),
+        }),
       });
 
       if (!res.ok) throw new Error("Request failed");
